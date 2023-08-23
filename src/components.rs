@@ -15,6 +15,7 @@ pub fn Login(cx: Scope) -> Element{
         input{
           name:"name",
           value:"{name}",
+          class:"input-bar",
           oninput: move |e|{
             name.set(e.value.clone())
           }
@@ -23,8 +24,10 @@ pub fn Login(cx: Scope) -> Element{
           to: Route::Chat{
             name: name.get().clone()
           },
+          class:"input-submit",
           input{
-            r#type:"submit"
+            r#type:"submit",
+            "Submit"
           }
         }
       }
@@ -48,8 +51,10 @@ pub fn Chat(cx: Scope, name:String) -> Element{
       ul{
         class:"messages",
         messages_rendered,
+      },
+      SendBar{
+        messages: messages
       }
-
     }
   }
 }
@@ -57,8 +62,32 @@ pub fn Chat(cx: Scope, name:String) -> Element{
 fn Message(cx: Scope, message:String ) -> Element{
   render!{
     li{
+      class:"message",
       "{message}",
-      // key:"{id}"
     }
   }
+}
+#[inline_props]
+fn SendBar<'a>(cx: Scope, messages: &'a UseRef<Vec<String>>) -> Element{
+  let message = use_state(cx, || "".to_string());
+	render!{
+			form{
+				onsubmit: move 	|_|{
+						messages.write().push(message.get().clone());
+						message.set("".to_string())
+				},
+				prevent_default:"onsubmit",
+				input{
+					name:"send",
+					class:"input-bar",
+					value: "{message}",
+					oninput: move |e| message.set(e.value.clone())
+				}
+				input{
+					class:"input-submit",
+					r#type:"submit",
+          "Submit"
+				}
+			}
+		}
 }
