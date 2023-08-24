@@ -1,10 +1,11 @@
 
-use dioxus::prelude::*;
-use dioxus_router::prelude::*;
-use std::process::exit;
 use tokio::io::{self, AsyncWriteExt, BufReader, AsyncReadExt};
-use tokio::net::TcpStream;
+use std::sync::{Arc, Mutex};
 use tokio::sync::mpsc::{self, Sender};
+use dioxus_router::prelude::*;
+use tokio::net::TcpStream;
+use dioxus::prelude::*;
+use std::process::exit;
 use crate::Route;
 
 #[inline_props]
@@ -41,31 +42,29 @@ pub fn Login(cx: Scope) -> Element{
 #[inline_props]
 pub fn Chat(cx: Scope, name:String) -> Element{
   let messages = use_ref(cx, || Vec::<String>::new());
-  let (tx, mut rx) = mpsc::channel(10);
+  
+  let (tx, mut rx) = mpsc::channel::<String>(10);
   let _ws: &Coroutine<()> = use_coroutine(cx, |_rx| async move {
     let mut client = TcpStream::connect("localhost:3000").await.unwrap();
     tokio::spawn(async move{
-      let (_reader, mut writer) = client.split();
-      let mut data = [0;64];
+      let (reader, mut writer) = client.split();
+      let mut reader = BufReader::new(reader);
       let mut buffer = [0;64];
-      let mut stdin = io::stdin();
       
       loop{
         tokio::select! {
-          result = rx.recv() => {
+          result = reader.read(&mut buffer) => {
               
-            println!("{}", String::from_utf8_lossy(&buffer));
+            // messages.write().push(String::from_utf8_lossy(&buffer).to_string());
             buffer = [0;64];
             
-            if let None = result{
+            if let Err(_) = result{
               println!("Connection Broked");
               exit(0);
             };
           }
-          _ = stdin.read(&mut data) => {
-
-            writer.write_all(&data).await.expect("Error writing to stream");
-            data = [0;64];
+          message = rx.recv() => {
+            writer.write_all(message.clone().unwrap().as_bytes()).await.expect("Error writing to stream");
           }
         }
       }
