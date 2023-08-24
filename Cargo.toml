@@ -8,6 +8,7 @@ edition = "2021"
 #Setup
 dioxus-desktop = { version = "0.4" }
 dioxus = { version = "0.4" }
+tokio = {version = "1", features = ["full"]}
 #Routing
 dioxus-router = { version = "0.4" }
 # Debug
@@ -15,3 +16,4 @@ log = "0.4.19"
 dioxus-logger = "0.4.1"
 #State Managment
 fermi = {git = "https://github.com/dioxuslabs/dioxus"}
+

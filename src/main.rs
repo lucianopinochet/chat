@@ -1,12 +1,13 @@
 #![allow(non_snake_case)]
 
 mod components;
-mod models;
 use dioxus_router::prelude::*;
 
 use dioxus::prelude::*;
 use components::*;
-fn main() {
+
+#[tokio::main]
+async fn main() {
     
   dioxus_desktop::launch(App);
     
