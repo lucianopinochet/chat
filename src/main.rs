@@ -1,8 +1,8 @@
 #![allow(non_snake_case)]
 
 mod components;
+mod tool;
 use dioxus_router::prelude::*;
-
 use dioxus::prelude::*;
 use components::*;
 

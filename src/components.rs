@@ -1,13 +1,8 @@
-
-use tokio::io::{self, AsyncWriteExt, BufReader, AsyncReadExt};
-use std::sync::{Arc, Mutex};
-use tokio::sync::mpsc::{self, Sender};
+// use tokio::sync::mpsc::{self, Sender, Receiver};
 use dioxus_router::prelude::*;
-use tokio::net::TcpStream;
 use dioxus::prelude::*;
-use std::process::exit;
-use crate::Route;
-
+use crate::{Route, tool::coroutine_handle};
+// use std::sync::mpsc as sync_mpsc;
 #[inline_props]
 pub fn Login(cx: Scope) -> Element{
   let name = use_state(cx, || "".to_string());
@@ -43,32 +38,8 @@ pub fn Login(cx: Scope) -> Element{
 pub fn Chat(cx: Scope, name:String) -> Element{
   let messages = use_ref(cx, || Vec::<String>::new());
   
-  let (tx, mut rx) = mpsc::channel::<String>(10);
-  let _ws: &Coroutine<()> = use_coroutine(cx, |_rx| async move {
-    let mut client = TcpStream::connect("localhost:3000").await.unwrap();
-    tokio::spawn(async move{
-      let (reader, mut writer) = client.split();
-      let mut reader = BufReader::new(reader);
-      let mut buffer = [0;64];
-      
-      loop{
-        tokio::select! {
-          result = reader.read(&mut buffer) => {
-              
-            // messages.write().push(String::from_utf8_lossy(&buffer).to_string());
-            buffer = [0;64];
-            
-            if let Err(_) = result{
-              println!("Connection Broked");
-              exit(0);
-            };
-          }
-          message = rx.recv() => {
-            writer.write_all(message.clone().unwrap().as_bytes()).await.expect("Error writing to stream");
-          }
-        }
-      }
-    }).await.unwrap();
+  let tx: &Coroutine<String> = use_coroutine(cx, |rx:UnboundedReceiver<String>| async move {
+    coroutine_handle(rx).await;
   });
   let messages_lock = messages.read();
   let messages_rendered = messages_lock.iter().map(|message|{
@@ -102,13 +73,15 @@ fn Message(cx: Scope, message:String ) -> Element{
   }
 }
 #[inline_props]
-fn SendBar<'a>(cx: Scope, messages: &'a UseRef<Vec<String>>, sender: Sender<String>) -> Element{
+fn SendBar<'a>(cx: Scope, messages: &'a UseRef<Vec<String>>, sender: &'a dioxus::prelude::Coroutine<String>) -> Element{
   let message = use_state(cx, || "".to_string());
 	render!{
 			form{
 				onsubmit: move |_|{
 						messages.write().push(message.get().clone());
-            sender.send(message.get().clone());
+            let _ws: &Coroutine<()> = use_coroutine(cx, |_rx| async move {
+              sender.send(message.get().clone());
+            });
 						message.set("".to_string())
 				},
 				prevent_default:"onsubmit",
