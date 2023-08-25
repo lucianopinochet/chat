@@ -1,8 +1,8 @@
-// use tokio::sync::mpsc::{self, Sender, Receiver};
 use dioxus_router::prelude::*;
 use dioxus::prelude::*;
 use crate::{Route, tool::coroutine_handle};
-// use std::sync::mpsc as sync_mpsc;
+use std::sync::Arc;
+use tokio::sync::Mutex;
 #[inline_props]
 pub fn Login(cx: Scope) -> Element{
   let name = use_state(cx, || "".to_string());
@@ -37,9 +37,9 @@ pub fn Login(cx: Scope) -> Element{
 #[inline_props]
 pub fn Chat(cx: Scope, name:String) -> Element{
   let messages = use_ref(cx, || Vec::<String>::new());
-  
+  let arc_messages = Arc::new(Mutex::new(messages));
   let tx: &Coroutine<String> = use_coroutine(cx, |rx:UnboundedReceiver<String>| async move {
-    coroutine_handle(rx).await;
+    coroutine_handle(rx, Arc::clone(&arc_messages)).await;
   });
   let messages_lock = messages.read();
   let messages_rendered = messages_lock.iter().map(|message|{
@@ -79,9 +79,7 @@ fn SendBar<'a>(cx: Scope, messages: &'a UseRef<Vec<String>>, sender: &'a dioxus:
 			form{
 				onsubmit: move |_|{
 						messages.write().push(message.get().clone());
-            let _ws: &Coroutine<()> = use_coroutine(cx, |_rx| async move {
-              sender.send(message.get().clone());
-            });
+            sender.send(message.get().clone());
 						message.set("".to_string())
 				},
 				prevent_default:"onsubmit",
