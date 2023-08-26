@@ -17,4 +17,5 @@ dioxus-logger = "0.4.1"
 #State Managment
 fermi = {git = "https://github.com/dioxuslabs/dioxus"}
 futures-util = "0.3.28"
+dioxus-hooks = "0.4.0"
 

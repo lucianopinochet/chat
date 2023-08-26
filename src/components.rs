@@ -1,8 +1,11 @@
+use std::process::exit;
+
 use dioxus_router::prelude::*;
 use dioxus::prelude::*;
-use crate::{Route, tool::coroutine_handle};
-use std::sync::Arc;
-use tokio::sync::Mutex;
+use tokio::net::TcpStream;
+use crate::Route;
+use futures_util::stream::StreamExt;
+use tokio::io::{BufReader, AsyncReadExt, AsyncWriteExt};
 #[inline_props]
 pub fn Login(cx: Scope) -> Element{
   let name = use_state(cx, || "".to_string());
@@ -37,9 +40,36 @@ pub fn Login(cx: Scope) -> Element{
 #[inline_props]
 pub fn Chat(cx: Scope, name:String) -> Element{
   let messages = use_ref(cx, || Vec::<String>::new());
-  let arc_messages = Arc::new(Mutex::new(messages));
-  let tx: &Coroutine<String> = use_coroutine(cx, |rx:UnboundedReceiver<String>| async move {
-    coroutine_handle(rx, Arc::clone(&arc_messages)).await;
+  let messages_cloned = messages.clone();
+  let tx: &Coroutine<String> = use_coroutine(cx, |mut rx:UnboundedReceiver<String>| async move {
+    let mut client = TcpStream::connect("localhost:3000").await.unwrap();
+    let (reader, mut writer) = client.split();
+    let mut reader = BufReader::new(reader);
+    let mut buffer = [0;64];
+    loop{
+      tokio::select! {
+        result = reader.read(&mut buffer) => {
+          messages_cloned.write().push(String::from_utf8_lossy(&buffer).to_string());
+          buffer = [0;64];
+          if let Err(_) = result{
+            println!("Connection Broked");
+            exit(0);
+          };
+        }
+        message = rx.next() => {
+          match message {
+            Some(msg) => {
+              println!("{msg}");
+              writer.write_all(msg.to_string().as_bytes()).await.expect("Error writing to stream");
+            },
+            None => {
+              println!("Error");
+            }
+          }
+        }
+      }      
+    };
+
   });
   let messages_lock = messages.read();
   let messages_rendered = messages_lock.iter().map(|message|{
