@@ -24,11 +24,9 @@ fn App(cx: Scope) -> Element {
 #[derive(Clone, Routable, Debug, PartialEq)]
  pub enum Route {
   #[route("/")]
-  Login{},
-  #[route("/chat")]
-  Chat{
-    name:String
-  }
+  // Login{},
+  // #[route("/chat")]
+  Chat{}
 }
 
 
