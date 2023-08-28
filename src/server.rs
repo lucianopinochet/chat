@@ -4,9 +4,10 @@ use tokio::{
 	sync::broadcast,
 	io::{ BufReader, AsyncWriteExt, AsyncReadExt},
 	};
-#[tokio::main]
-async fn main(){
-  let listener = TcpListener::bind("localhost:3001").await.unwrap();
+pub async fn main(addr:&str){
+	println!("server starting");
+  let listener = TcpListener::bind(addr).await.unwrap();
+	println!("server started");
 	let (tx, _rx) = broadcast::channel(10);
 	loop{
 		let (mut stream, socket_addr) = listener.accept().await.unwrap();

@@ -5,13 +5,20 @@ use tokio::net::TcpStream;
 use crate::Route;
 use futures_util::stream::StreamExt;
 use tokio::io::{BufReader, AsyncReadExt, AsyncWriteExt};
+use crate::server::main;
+const ADDR:&str = "localhost:3001";
 #[inline_props]
 pub fn Chat(cx: Scope) -> Element{
   let messages = use_ref(cx, || Vec::<(String, char)>::new());
   let messages_cloned = messages.clone();
-  // let (tx, mut rx) = tokio::sync::mpsc::channel::<String>(10);
   let tx: &Coroutine<String> = use_coroutine(cx, |mut rx:UnboundedReceiver<String>| async move {
-    let mut client = TcpStream::connect("localhost:3001").await.unwrap();
+    let mut client  = match TcpStream::connect(ADDR).await{
+      Ok(connection) => connection,
+      Err(_) => {
+        main(ADDR).await;
+        TcpStream::connect(ADDR).await.unwrap()
+      },
+    };
     let (reader, mut writer) = client.split();
     let mut reader = BufReader::new(reader);
     let mut buffer = [0;64];
@@ -129,37 +136,4 @@ pub fn Login(cx: Scope) -> Element{
       }
     }
   }
-}
-          // #[inline_props]
-          // fn Message(cx: Scope, message:String ) -> Element{
-          //   render!{
-          //     li{
-          //       class:"message-sender",
-          //       "{message}",
-          //     }
-          //   }
-          // }
-    // cx.spawn(async move{
-    //   let mut client = TcpStream::connect("localhost:3001").await.unwrap();
-    //   let (reader, mut writer) = client.split();
-    //   let mut reader = BufReader::new(reader);
-    //   let mut buffer = [0;64];
-    //   loop{
-    //     tokio::select! {
-    //       result = reader.read(&mut buffer) => {
-    //         messages_cloned.write().push(String::from_utf8_lossy(&buffer).to_string());
-    //         buffer = [0;64];
-    //         if let Err(_) = result{
-    //           println!("Connection Broked");
-    //           exit(0);
-    //         };
-    //         std::thread::sleep(Duration::from_millis(100));
-    //       }
-    //       message = rx.recv() => {
-    //         println!("1: {message:?}");
-    //         writer.write_all(message.unwrap().as_bytes()).await.unwrap_or_else(|_| println!("message not sended"));
-            
-    //       }
-    //     }      
-    //   };
-    // });
+} 
