@@ -12,10 +12,13 @@ pub fn Chat(cx: Scope) -> Element{
   let messages = use_ref(cx, || Vec::<(String, char)>::new());
   let messages_cloned = messages.clone();
   let tx: &Coroutine<String> = use_coroutine(cx, |mut rx:UnboundedReceiver<String>| async move {
-    let mut client  = match TcpStream::connect(ADDR).await{
+    let mut client: TcpStream  = match TcpStream::connect(ADDR).await{
       Ok(connection) => connection,
       Err(_) => {
-        main(ADDR).await;
+        tokio::spawn(async{
+          main(ADDR).await;
+        });
+        std::thread::sleep(Duration::from_millis(100));
         TcpStream::connect(ADDR).await.unwrap()
       },
     };
@@ -49,7 +52,6 @@ pub fn Chat(cx: Scope) -> Element{
   });
   let messages_lock = messages.read();
   let messages_rendered = messages_lock.iter().map(|(message,side)|{
-    println!("{message}");
     if !message.is_empty(){
       if *side == 'l' {
         render!{

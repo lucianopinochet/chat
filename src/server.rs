@@ -5,9 +5,8 @@ use tokio::{
 	io::{ BufReader, AsyncWriteExt, AsyncReadExt},
 	};
 pub async fn main(addr:&str){
-	println!("server starting");
+	println!("SERVER STARTED");
   let listener = TcpListener::bind(addr).await.unwrap();
-	println!("server started");
 	let (tx, _rx) = broadcast::channel(10);
 	loop{
 		let (mut stream, socket_addr) = listener.accept().await.unwrap();
